@@ -22,16 +22,15 @@ function createBot() {
 
     const bot = mineflayer.createBot(botOptions);
     let spawnTimeout = null;
-    let isStabilizing = true; // İlk giriş koruma bayrağı
 
-    // Botun sunucuya gönderdiği ağ paketlerini yakalayıp filtreliyoruz
+    // Botun sunucuya gönderdiği hareket/pozisyon paketlerini kalıcı olarak filtreliyoruz
+    // AFK botu hareket etmeyeceği için bu paketlerin gitmesi anti-cheat'e yakalanmaktan başka işe yaramaz.
     bot._client.on('connect', () => {
-        isStabilizing = true;
         const originalWrite = bot._client.write;
         
         bot._client.write = function(name, data) {
-            // İlk 3 saniye boyunca hareket ve pozisyon paketlerinin gitmesini engelle
-            if (isStabilizing && (name === 'position' || name === 'position_look' || name === 'look' || name === 'steer_vehicle')) {
+            // Pozisyon ve görünüm paketlerini tamamen engelliyoruz (Sabit duruş garantisi)
+            if (name === 'position' || name === 'position_look' || name === 'look' || name === 'steer_vehicle') {
                 return; 
             }
             return originalWrite.call(this, name, data);
@@ -45,24 +44,7 @@ function createBot() {
             bot.entity.onGround = true;
         }
 
-        console.log("[Modules] Initializing all modules...");
-        
-        // 3 saniyelik kritik koruma süresi
-        spawnTimeout = setTimeout(() => {
-            isStabilizing = false; // Koruma kalkıyor, normal akışa dönülüyor
-            console.log("[Bot] 3 saniyelik güvenlik süresi doldu, bağlantı kararlaştı!");
-
-            if (settings.position && settings.position.enabled) {
-                console.log("[Position] Navigating to configured position...");
-            }
-
-            if (settings.movement && settings.movement.enabled) {
-                console.log("[Movement] Movement modules started.");
-            }
-
-        }, 3000);
-
-        console.log("[Modules] All modules initialized!");
+        console.log("[Modules] Bot başarıyla sabitlendi, AFK modunda bekliyor...");
     });
 
     // Otomatik yeniden bağlanma (Auto-reconnect) mekanizması
@@ -74,11 +56,10 @@ function createBot() {
             spawnTimeout = null;
         }
 
-        if (settings.utils && settings.utils['auto-reconnect']) {
-            const delay = settings.utils['auto-reconnect-delay'] || 10000;
-            console.log(`[Bot] Reconnecting in ${delay}ms...`);
-            setTimeout(createBot, delay);
-        }
+        // duplicate_login hatasını önlemek için süreyi güvenli olması adına 20 saniye yapıyoruz
+        const delay = 20000; 
+        console.log(`[Bot] Çakışmayı önlemek için ${delay / 1000} saniye bekleyip yeniden bağlanılacak...`);
+        setTimeout(createBot, delay);
     });
 
     bot.on('kicked', (reason) => {

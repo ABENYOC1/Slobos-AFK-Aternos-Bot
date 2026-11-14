@@ -12,7 +12,8 @@ function createBot() {
         host: settings.server.ip,
         port: settings.server.port,
         username: settings['bot-account'].username,
-        auth: settings['bot-account'].type
+        auth: settings['bot-account'].type,
+        hideErrors: true // Arka plandaki gereksiz akış hatalarını gizler
     };
 
     if (settings.server.version && settings.server.version.trim() !== "") {
@@ -25,8 +26,8 @@ function createBot() {
     bot.once('spawn', () => {
         console.log(`[Bot] [+] Successfully spawned on server! (Version: ${bot.version})`);
         
-        // Sunucunun pozisyon kontrolünü atlatmak için botun kendi konumunu sunucuya bildiriyoruz
-        if (bot.entity && bot.entity.position) {
+        // Sunucunun hareket doğrulamasını rahatlatmak için entity durumunu sabitliyoruz
+        if (bot.entity) {
             bot.entity.onGround = true;
         }
 
@@ -69,7 +70,12 @@ function createBot() {
         console.log(`[Bot] Kicked: ${JSON.stringify(reason)}`);
     });
 
+    // EPIPE ve soket hatalarının botu çökeltmesini engelleyen güvenli hata yakalama
     bot.on('error', (err) => {
+        if (err.code === 'EPIPE' || err.code === 'ECONNRESET') {
+            // Bu ağ hataları normaldir, konsolu kirletmemesi için yutulur ve 'end' olayına bırakılır
+            return;
+        }
         console.log(`[Bot] Error: ${err.message}`);
     });
 }

@@ -6,7 +6,7 @@
     "type": "offline"
   },
   "server": {
-    "ip": "5.9.41.143:32880",
+    "ip": "gold.magmanode.com",
     "port": 32880,
     "version": "26.3",
     "try-creative": false

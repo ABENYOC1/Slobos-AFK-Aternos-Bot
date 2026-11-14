@@ -23,17 +23,19 @@ function createBot() {
     const bot = mineflayer.createBot(botOptions);
 
     bot.once('spawn', () => {
+        // Anti-cheat kicklerini önlemek için fizik motorunu kapatıyoruz (bot tamamen sabit durur)
+        bot.physicsEnabled = false;
+
         console.log(`[Bot] [+] Successfully spawned on server! (Version: ${bot.version})`);
         console.log("[Modules] Initializing all modules...");
         
-        // Anti-cheat korumasını aşmak için sunucuya girdikten sonra 3 saniye bekliyoruz
+        // 3 saniyelik ek güvenlik gecikmesi
         setTimeout(() => {
             console.log("[Bot] 3 saniyelik güvenlik süresi doldu, modüller aktifleşiyor!");
 
             // Konum (Position) ayarları aktifse uygula
             if (settings.position && settings.position.enabled) {
                 console.log("[Position] Navigating to configured position...");
-                // Konum yönlendirme kodunuz buraya gelebilir
             }
 
             // Hareket (Movement) modülleri aktifse başlat
@@ -50,7 +52,7 @@ function createBot() {
     bot.on('end', () => {
         console.log("[Bot] Disconnected from server.");
         if (settings.utils && settings.utils['auto-reconnect']) {
-            const delay = settings.utils['auto-reconnect-delay'] || 2000;
+            const delay = settings.utils['auto-reconnect-delay'] || 10000;
             console.log(`[Bot] Reconnecting in ${delay}ms...`);
             setTimeout(createBot, delay);
         }

@@ -8,13 +8,11 @@ let settings = JSON.parse(rawData);
 function createBot() {
     console.log(`[Bot] Connecting to ${settings.server.ip}:${settings.server.port}`);
     
-    // Bot seçenekleri ve fizik motorunu baştan devre dışı bırakma
     const botOptions = {
         host: settings.server.ip,
         port: settings.server.port,
         username: settings['bot-account'].username,
-        auth: settings['bot-account'].type,
-        physicsEnabled: false // Anti-cheat kicklerini önlemek için fizik motoru baştan kapalı
+        auth: settings['bot-account'].type
     };
 
     if (settings.server.version && settings.server.version.trim() !== "") {
@@ -22,10 +20,16 @@ function createBot() {
     }
 
     const bot = mineflayer.createBot(botOptions);
-    let spawnTimeout = null; // Zamanlayıcı takibi için değişken
+    let spawnTimeout = null;
 
     bot.once('spawn', () => {
         console.log(`[Bot] [+] Successfully spawned on server! (Version: ${bot.version})`);
+        
+        // Sunucunun pozisyon kontrolünü atlatmak için botun kendi konumunu sunucuya bildiriyoruz
+        if (bot.entity && bot.entity.position) {
+            bot.entity.onGround = true;
+        }
+
         console.log("[Modules] Initializing all modules...");
         
         // 3 saniyelik güvenli bekleme süresi
@@ -49,7 +53,6 @@ function createBot() {
     bot.on('end', () => {
         console.log("[Bot] Disconnected from server.");
         
-        // Önceki oturumdan kalan zamanlayıcıyı temizle (çakışmayı önler)
         if (spawnTimeout) {
             clearTimeout(spawnTimeout);
             spawnTimeout = null;

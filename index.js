@@ -8,12 +8,13 @@ let settings = JSON.parse(rawData);
 function createBot() {
     console.log(`[Bot] Connecting to ${settings.server.ip}:${settings.server.port}`);
     
-    // Sürüm ayarı boş ise otomatik algılatılır
+    // Bot seçenekleri ve fizik motorunu baştan devre dışı bırakma
     const botOptions = {
         host: settings.server.ip,
         port: settings.server.port,
         username: settings['bot-account'].username,
-        auth: settings['bot-account'].type
+        auth: settings['bot-account'].type,
+        physicsEnabled: false // Anti-cheat kicklerini önlemek için fizik motoru baştan kapalı
     };
 
     if (settings.server.version && settings.server.version.trim() !== "") {
@@ -21,29 +22,25 @@ function createBot() {
     }
 
     const bot = mineflayer.createBot(botOptions);
+    let spawnTimeout = null; // Zamanlayıcı takibi için değişken
 
     bot.once('spawn', () => {
-        // Anti-cheat kicklerini önlemek için fizik motorunu kapatıyoruz (bot tamamen sabit durur)
-        bot.physicsEnabled = false;
-
         console.log(`[Bot] [+] Successfully spawned on server! (Version: ${bot.version})`);
         console.log("[Modules] Initializing all modules...");
         
-        // 3 saniyelik ek güvenlik gecikmesi
-        setTimeout(() => {
+        // 3 saniyelik güvenli bekleme süresi
+        spawnTimeout = setTimeout(() => {
             console.log("[Bot] 3 saniyelik güvenlik süresi doldu, modüller aktifleşiyor!");
 
-            // Konum (Position) ayarları aktifse uygula
             if (settings.position && settings.position.enabled) {
                 console.log("[Position] Navigating to configured position...");
             }
 
-            // Hareket (Movement) modülleri aktifse başlat
             if (settings.movement && settings.movement.enabled) {
                 console.log("[Movement] Movement modules started.");
             }
 
-        }, 3000); // 3000 milisaniye = 3 saniye
+        }, 3000);
 
         console.log("[Modules] All modules initialized!");
     });
@@ -51,6 +48,13 @@ function createBot() {
     // Otomatik yeniden bağlanma (Auto-reconnect) mekanizması
     bot.on('end', () => {
         console.log("[Bot] Disconnected from server.");
+        
+        // Önceki oturumdan kalan zamanlayıcıyı temizle (çakışmayı önler)
+        if (spawnTimeout) {
+            clearTimeout(spawnTimeout);
+            spawnTimeout = null;
+        }
+
         if (settings.utils && settings.utils['auto-reconnect']) {
             const delay = settings.utils['auto-reconnect-delay'] || 10000;
             console.log(`[Bot] Reconnecting in ${delay}ms...`);
